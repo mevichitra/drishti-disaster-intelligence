@@ -1,19 +1,20 @@
 import { useEffect, useMemo } from 'react'
-import { MapContainer, TileLayer, CircleMarker, Marker, GeoJSON, Tooltip, useMap } from 'react-leaflet'
+import { MapContainer, TileLayer, Marker, GeoJSON, Tooltip, useMap } from 'react-leaflet'
 import L from './leafletGlobal.js'
 import 'leaflet.heat'
-import { SEV_COLOR, n1, n2 } from '../util.jsx'
+import { T } from '../tokens.js'
+import { SEV_ORDER, SevGlyph, glyphSvg, n1, n2 } from '../util.jsx'
 
 function HeatLayer({ points }) {
   const map = useMap()
   useEffect(() => {
     if (!points.length) return
     const layer = L.heatLayer(points, {
-      radius: 38,
-      blur: 30,
-      minOpacity: 0.25,
+      radius: 34,
+      blur: 26,
+      minOpacity: 0.2,
       maxZoom: 6,
-      gradient: { 0.2: '#1f6feb', 0.4: '#3ddc97', 0.6: '#ffd23f', 0.8: '#ff8a3d', 1.0: '#ff3b5c' },
+      gradient: { 0.25: '#F1E3B3', 0.5: T.sev.ELEVATED, 0.75: T.sev.HIGH, 1.0: T.sev.CRITICAL },
     }).addTo(map)
     return () => {
       map.removeLayer(layer)
@@ -25,95 +26,103 @@ function HeatLayer({ points }) {
 function FlyTo({ target }) {
   const map = useMap()
   useEffect(() => {
-    if (target) map.flyTo([target.lat, target.lng], Math.max(map.getZoom(), 6), { duration: 0.9 })
+    if (target) map.flyTo([target.lat, target.lng], Math.max(map.getZoom(), 6), { duration: 0.8 })
   }, [target?.lat, target?.lng, map]) // eslint-disable-line react-hooks/exhaustive-deps
   return null
 }
 
-function pulseIcon(color) {
-  return L.divIcon({
-    className: 'pulse-icon',
-    html: `<span style="--c:${color}"></span>`,
-    iconSize: [0, 0],
-  })
+const iconCache = new Map()
+function icon(sev, score, selected) {
+  const size = Math.round(13 + (score / 100) * 11) + (selected ? 4 : 0)
+  const key = `${sev}-${size}-${selected}`
+  if (!iconCache.has(key)) {
+    const ring = selected ? `<span style="position:absolute;inset:-5px;border:2px solid ${T.ink};border-radius:50%"></span>` : ''
+    iconCache.set(
+      key,
+      L.divIcon({
+        className: 'glyph-icon',
+        html: `<span style="position:relative;display:block;width:${size}px;height:${size}px">${ring}${glyphSvg(sev, size)}</span>`,
+        iconSize: [size, size],
+        iconAnchor: [size / 2, size / 2],
+      }),
+    )
+  }
+  return iconCache.get(key)
 }
 
-export default function RiskMap({ stations = [], zones, selectedId, onSelect, height = 520, layers, focus }) {
-  const L0 = layers || { stations: true, zones: true, heat: false }
-  const heatPts = useMemo(
-    () => stations.map((s) => [s.lat, s.lng, Math.min(1, (s.score / 100) ** 1.25 * 1.15)]),
-    [stations],
+export function MapLegend({ extra }) {
+  return (
+    <div className="map-panel bl">
+      {[...SEV_ORDER].reverse().map((s) => (
+        <span key={s} className="key">
+          <SevGlyph s={s} size={14} />
+          {s[0] + s.slice(1).toLowerCase()}
+        </span>
+      ))}
+      <span className="muted">Symbol size = risk score</span>
+      {extra}
+    </div>
   )
+}
+
+export default function RiskMap({ stations = [], zones, selectedId, onSelect, height = 560, layers, focus }) {
+  const on = layers || { stations: true, zones: true, heat: false }
+  const heatPts = useMemo(() => stations.map((s) => [s.lat, s.lng, Math.min(1, (s.score / 100) ** 1.2 * 1.1)]), [stations])
   const zoneKey = useMemo(
     () => (zones ? zones.features.map((f) => f.properties.severity[0] + Math.round(f.properties.maxScore / 5)).join('') : ''),
     [zones],
   )
   const sel = stations.find((s) => s.id === selectedId)
   const flyTarget = focus || (sel ? { lat: sel.lat, lng: sel.lng } : null)
+  const sorted = useMemo(() => [...stations].sort((a, b) => a.score - b.score), [stations]) // worst drawn last (on top)
 
   return (
-    <MapContainer center={[22, 25]} zoom={2} minZoom={2} worldCopyJump style={{ height, width: '100%' }}>
+    <MapContainer center={[24, 20]} zoom={2} minZoom={2} worldCopyJump style={{ height, width: '100%' }}>
       <TileLayer
-        attribution="Tiles &copy; Esri &mdash; Esri, DeLorme, NAVTEQ"
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/{z}/{y}/{x}"
+        attribution="Tiles © Esri — Esri, DeLorme, NAVTEQ"
+        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Base/MapServer/tile/{z}/{y}/{x}"
         maxZoom={13}
       />
       <TileLayer
-        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
+        url="https://server.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Light_Gray_Reference/MapServer/tile/{z}/{y}/{x}"
         maxZoom={13}
-        opacity={0.8}
       />
-      {L0.zones && zones && (
+      {on.zones && zones && (
         <GeoJSON
           key={zoneKey}
           data={zones}
-          style={(f) => ({
-            color: SEV_COLOR[f.properties.severity],
-            weight: 1.2,
-            fillColor: SEV_COLOR[f.properties.severity],
-            fillOpacity: f.properties.severity === 'NORMAL' ? 0.07 : 0.2,
-          })}
+          style={(f) => {
+            const sev = f.properties.severity
+            return {
+              color: sev === 'NORMAL' ? T.ink3 : T.sev[sev],
+              weight: sev === 'NORMAL' ? 0.8 : 1.6,
+              dashArray: '4 3',
+              fillColor: T.sev[sev],
+              fillOpacity: sev === 'NORMAL' ? 0.04 : sev === 'ELEVATED' ? 0.14 : 0.22,
+            }
+          }}
           onEachFeature={(f, layer) =>
             layer.bindTooltip(
-              `<div class="tt"><b>${f.properties.name}</b><div>${f.properties.classification} flood-risk zone · pop. ${f.properties.populationM} M</div><div>Peak score ${f.properties.maxScore} · ${f.properties.severity}</div></div>`,
+              `<div class="tt"><b>${f.properties.name}</b><div class="m">${f.properties.classification} flood-risk zone · pop. ${f.properties.populationM}M</div><div class="m">worst gauge ${f.properties.maxScore} · ${f.properties.severity}</div></div>`,
               { sticky: true },
             )
           }
         />
       )}
-      {L0.heat && <HeatLayer points={heatPts} />}
-      {L0.stations &&
-        stations.map((s) => (
-          <CircleMarker
-            key={s.id}
-            center={[s.lat, s.lng]}
-            radius={s.id === selectedId ? 10 : 4 + s.score / 14}
-            pathOptions={{
-              color: s.id === selectedId ? '#fff' : SEV_COLOR[s.severity],
-              weight: s.id === selectedId ? 3 : 1.5,
-              fillColor: SEV_COLOR[s.severity],
-              fillOpacity: 0.75,
-            }}
-            eventHandlers={{ click: () => onSelect?.(s.id) }}
-          >
-            <Tooltip direction="top" offset={[0, -6]}>
+      {on.heat && <HeatLayer points={heatPts} />}
+      {on.stations &&
+        sorted.map((s) => (
+          <Marker key={s.id} position={[s.lat, s.lng]} icon={icon(s.severity, s.score, s.id === selectedId)} eventHandlers={{ click: () => onSelect?.(s.id) }}>
+            <Tooltip direction="top" offset={[0, -8]}>
               <div className="tt">
                 <b>{s.name}</b>
-                <div>{s.country} · {s.river}</div>
-                <div>
-                  Risk <b style={{ display: 'inline', color: SEV_COLOR[s.severity] }}>{n1(s.score)}</b> · {s.severity}
-                </div>
-                <div>River {n2(s.level)} m · rain {n1(s.rainWin)} mm/h</div>
+                <div className="m">{s.country} · {s.river}</div>
+                <div className="m">{s.severity} · score {n1(s.score)}</div>
+                <div className="m">level {n2(s.level)} m · rain {n1(s.rainWin)} mm/h</div>
               </div>
             </Tooltip>
-          </CircleMarker>
+          </Marker>
         ))}
-      {L0.stations &&
-        stations
-          .filter((s) => s.severity === 'CRITICAL' || s.severity === 'HIGH')
-          .map((s) => (
-            <Marker key={'p' + s.id} position={[s.lat, s.lng]} icon={pulseIcon(SEV_COLOR[s.severity])} interactive={false} />
-          ))}
       <FlyTo target={flyTarget} />
     </MapContainer>
   )

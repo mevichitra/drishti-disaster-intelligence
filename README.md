@@ -9,11 +9,14 @@ Project: *Disaster & Emergency Intelligence System* — Big Data Analytics (BIS7
 |---|---|
 | Store large disaster datasets in MongoDB | `server/src/seed.js` — 3.6 M time-series documents, 46 risk zones, 900 historical events |
 | Analyse historical + real-time data | `server/src/live.js` simulated live feed, `server/src/analytics.js` pipelines |
-| High-risk areas on a map (location data) | 2dsphere indexes, `$geoNear`, `$geoWithin`; Risk Map tab |
+| High-risk areas on a map (location data) | 2dsphere indexes, `$geoNear`, `$geoWithin`; Map page |
 | Detect unusual rainfall / river / weather changes | baseline (`$stdDevPop`, `$percentile` → `$merge`) + z-score & rate-of-rise anomaly pipeline |
 | Interactive dashboard | React + Recharts + React-Leaflet (`client/`) |
-| Reports & insights | Reports tab → stored in the `reports` collection |
-| Disaster patterns for authorities | Analytics tab (`$facet` history, seasonality, regional ranking) |
+| Reports & insights | Reports page → stored in the `reports` collection |
+| Disaster patterns for authorities | Analysis page (`$facet` history, seasonality, regional ranking) |
+
+## Design
+The UI follows a written design system, [DESIGN.md](DESIGN.md): a flood-bulletin aesthetic (ink on paper, ruled tables, numbered sections, severity encoded by glyph shape as well as colour). Tokens live in `client/src/tokens.js`; fonts are self-hosted so the app works offline.
 
 ## Stack
 React 19 + Vite · Recharts · React-Leaflet (+ leaflet.heat) · Node.js + Express · MongoDB 7 (time-series collections, aggregation pipelines, 2dsphere).

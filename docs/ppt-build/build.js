@@ -8,10 +8,11 @@ const ev = JSON.parse(fs.readFileSync(path.join(SH, 'events.json'), 'utf8'));
 const URL = 'https://windows.tailb18f6e.ts.net:8443';
 
 // ---- palette (matches the dashboard) -------------------------------------------------
-const BG = '0A101D', PANEL = '111B2F', PANEL2 = '16223A', BORDER = '22314F';
-const TEXT = 'E8EEFB', MUTED = '8DA0C2', ACC = '3CC8FF';
-const CRIT = 'FF3B5C', HIGH = 'FF8A3D', ELEV = 'FFD23F', NORM = '3DDC97', VIO = 'B18CFF';
-const FONT = 'Calibri';
+const BG = 'F1F3EF', PANEL = 'FAFBF8', PANEL2 = 'E6EAE4', BORDER = 'CBD2CA';
+const TEXT = '15211E', MUTED = '4F5D58', ACC = '0B5C7A';
+const CRIT = 'A3102E', HIGH = 'D1561F', ELEV = 'C79A1B', NORM = '5B8A8F', VIO = '6D5BA8';
+const FONT = 'Calibri', HFONT = 'Cambria', MONO = 'Courier New';
+const onFill = (c) => ([ELEV, NORM].includes(c) ? TEXT : 'FFFFFF');
 
 const pres = new pptxgen();
 pres.layout = 'LAYOUT_WIDE'; // 13.33 x 7.5
@@ -27,12 +28,12 @@ pres.defineSlideMaster({
   ],
   slideNumber: { x: 12.2, y: 7.08, w: 0.6, h: 0.3, fontFace: FONT, fontSize: 10, color: MUTED, align: 'right' },
   placeholders: [
-    { placeholder: { options: { name: 'title', type: 'title', x: 0.6, y: 0.35, w: 12.1, h: 0.85, fontFace: FONT, fontSize: 32, bold: true, color: TEXT, valign: 'middle', margin: 0 }, text: '' } },
+    { placeholder: { options: { name: 'title', type: 'title', x: 0.6, y: 0.35, w: 12.1, h: 0.85, fontFace: HFONT, fontSize: 32, bold: true, color: TEXT, valign: 'middle', margin: 0 }, text: '' } },
   ],
 });
 pres.defineSlideMaster({ title: 'COVER', background: { color: BG }, objects: [] });
 
-const shadow = () => ({ type: 'outer', color: '000000', blur: 12, offset: 3, angle: 90, opacity: 0.35 });
+const shadow = () => undefined;
 
 const SECTIONS = ['Introduction', 'Solution', 'Design', 'Big Data', 'Analytics', 'Demo', 'Implementation', 'Results'];
 SECTIONS.forEach((t) => pres.addSection({ title: t }));
@@ -46,12 +47,12 @@ function slide(title, notes, section) {
 }
 
 function card(s, x, y, w, h, o = {}) {
-  s.addShape(pres.ShapeType.roundRect, { x, y, w, h, rectRadius: 0.1, fill: { color: o.fill || PANEL }, line: { color: o.line || BORDER, width: 0.75 }, shadow: shadow(), objectName: o.name || 'card' });
+  s.addShape(pres.ShapeType.rect, { x, y, w, h, rectRadius: 0.1, fill: { color: o.fill || PANEL }, line: { color: o.line || BORDER, width: 0.75 }, shadow: shadow(), objectName: o.name || 'card' });
 }
 
 function textCard(s, x, y, w, h, head, body, color = ACC, o = {}) {
   card(s, x, y, w, h);
-  s.addShape(pres.ShapeType.ellipse, { x: x + 0.25, y: y + 0.25, w: 0.22, h: 0.22, fill: { color }, line: { color, width: 0 }, objectName: 'dot' });
+  s.addShape(pres.ShapeType.rect, { x: x + 0.25, y: y + 0.25, w: 0.22, h: 0.22, fill: { color }, line: { color, width: 0 }, objectName: 'dot' });
   s.addText(head, { x: x + 0.6, y: y + 0.16, w: w - 0.8, h: 0.4, fontFace: FONT, fontSize: o.headSize || 18, bold: true, color: TEXT, valign: 'middle', margin: 0, isTextBox: true });
   s.addText(body, { x: x + 0.25, y: y + 0.65, w: w - 0.5, h: h - 0.8, fontFace: FONT, fontSize: o.bodySize || 14, color: MUTED, valign: 'top', margin: 0, isTextBox: true, paraSpaceAfter: 4 });
 }
@@ -64,7 +65,7 @@ function stat(s, x, y, w, h, value, label, sub, color = ACC) {
 }
 
 function shot(s, file, x, y, w, ratio) {
-  s.addShape(pres.ShapeType.roundRect, { x: x - 0.06, y: y - 0.06, w: w + 0.12, h: w * ratio + 0.12, rectRadius: 0.06, fill: { color: PANEL }, line: { color: BORDER, width: 1 }, shadow: shadow(), objectName: 'frame' });
+  s.addShape(pres.ShapeType.rect, { x: x - 0.06, y: y - 0.06, w: w + 0.12, h: w * ratio + 0.12, rectRadius: 0.06, fill: { color: PANEL }, line: { color: BORDER, width: 1 }, shadow: shadow(), objectName: 'frame' });
   s.addImage({ path: path.join(SH, file), x, y, w, h: w * ratio, objectName: 'screenshot', altText: 'DRISHTI dashboard screenshot' });
 }
 
@@ -80,15 +81,16 @@ function bullets(s, items, x, y, w, h, size = 16) {
 // =====================================================================================
 {
   const s = pres.addSlide({ masterName: 'COVER', sectionTitle: 'Introduction' });
-  s.addShape(pres.ShapeType.ellipse, { x: 8.7, y: 1.2, w: 4.2, h: 4.2, fill: { color: PANEL }, line: { color: BORDER, width: 1 }, objectName: 'ring1' });
-  s.addShape(pres.ShapeType.ellipse, { x: 9.4, y: 1.9, w: 2.8, h: 2.8, fill: { color: PANEL2 }, line: { color: ACC, width: 2 }, objectName: 'ring2' });
-  s.addShape(pres.ShapeType.ellipse, { x: 10.15, y: 2.65, w: 1.3, h: 1.3, fill: { color: CRIT }, line: { color: CRIT, width: 0 }, objectName: 'pupil' });
-  s.addShape(pres.ShapeType.ellipse, { x: 10.58, y: 3.08, w: 0.44, h: 0.44, fill: { color: BG }, line: { color: BG, width: 0 }, objectName: 'pupil-core' });
-
+  s.addShape(pres.ShapeType.rect, { x: 9.2, y: 1.2, w: 3.6, h: 3.6, fill: { color: TEXT }, line: { color: TEXT, width: 0 }, objectName: 'mark' });
+  s.addShape(pres.ShapeType.rect, { x: 10.0, y: 1.75, w: 1.15, h: 2.5, fill: { color: BG }, line: { color: BG, width: 0 }, objectName: 'staff-fill-outer' });
+  s.addShape(pres.ShapeType.rect, { x: 10.1, y: 1.85, w: 0.95, h: 1.0, fill: { color: TEXT }, line: { color: TEXT, width: 0 }, objectName: 'staff-void' });
+  [1.85, 2.2, 2.55, 2.9, 3.25, 3.6, 3.95].forEach((y, i) => s.addShape(pres.ShapeType.rect, { x: 11.15, y, w: i % 2 ? 0.3 : 0.5, h: 0.04, fill: { color: BG }, line: { color: BG, width: 0 }, objectName: 'tick' }));
+  s.addShape(pres.ShapeType.rect, { x: 9.5, y: 2.85, w: 3.0, h: 0.09, fill: { color: HIGH }, line: { color: HIGH, width: 0 }, objectName: 'waterline' });
+  s.addShape(pres.ShapeType.rect, { x: 12.0, y: 1.5, w: 0.3, h: 0.3, fill: { color: CRIT }, line: { color: CRIT, width: 0 }, objectName: 'limit' });
   s.addText('BIG DATA ANALYTICS (BIS701)  ·  PROJECT PRESENTATION', { x: 0.7, y: 0.7, w: 8, h: 0.4, fontFace: FONT, fontSize: 14, bold: true, color: ACC, margin: 0, isTextBox: true, charSpacing: 3 });
   s.addText([
-    { text: 'DRISHTI', options: { fontFace: FONT, fontSize: 72, bold: true, color: TEXT } },
-    { text: '  दृष्टि', options: { fontFace: 'Nirmala UI', fontSize: 40, bold: true, color: ACC } },
+    { text: 'DRISHTI', options: { fontFace: HFONT, fontSize: 72, bold: true, color: TEXT } },
+    { text: '  दृष्टि', options: { fontFace: 'Nirmala UI', fontSize: 40, color: ACC } },
   ], { x: 0.7, y: 1.3, w: 8.5, h: 1.2, margin: 0, isTextBox: true, valign: 'middle' });
   s.addText('Disaster Risk Intelligence & Situational Hazard Tracking Interface', { x: 0.7, y: 2.55, w: 8.4, h: 0.9, fontFace: FONT, fontSize: 24, color: TEXT, margin: 0, isTextBox: true, valign: 'top' });
   s.addText('Disaster & Emergency Intelligence System: A MongoDB-Based Big Data Analytics Platform', { x: 0.7, y: 3.6, w: 8.2, h: 0.8, fontFace: FONT, fontSize: 16, italic: true, color: MUTED, margin: 0, isTextBox: true, valign: 'top' });
@@ -113,7 +115,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
 // =====================================================================================
 {
   const s = slide('Floods move fast. Decisions are slow.', 'Floods, cyclones and extreme rainfall are among the most frequent and destructive natural disasters. A few hours of delay in noticing a rising river changes the outcome of the response. The problem is not lack of data - it is lack of an integrated, analysable view of it.', 'Introduction');
-  s.addText('A few hours of delay in spotting heavy rainfall or a rising river can decide how an emergency response ends.', { x: 0.6, y: 1.5, w: 4.9, h: 2.6, fontFace: FONT, fontSize: 26, color: TEXT, margin: 0, isTextBox: true, valign: 'top' });
+  s.addText('A few hours of delay in spotting heavy rainfall or a rising river can decide how an emergency response ends.', { x: 0.6, y: 1.5, w: 4.9, h: 2.6, fontFace: HFONT, fontSize: 26, color: TEXT, margin: 0, isTextBox: true, valign: 'top' });
   s.addText('Rising urbanisation and unpredictable climate patterns make early detection harder every year.', { x: 0.6, y: 4.3, w: 4.9, h: 1.2, fontFace: FONT, fontSize: 16, color: MUTED, margin: 0, isTextBox: true, valign: 'top' });
   textCard(s, 6.0, 1.5, 6.7, 1.6, 'Hours matter', 'Early warning signs - heavy rain, fast-rising rivers - must be caught as they happen, not in next week\'s report.', CRIT);
   textCard(s, 6.0, 3.3, 6.7, 1.6, 'Data is scattered', 'Spreadsheets, paper reports and disconnected monitoring tools force analysts to piece the picture together by hand.', HIGH);
@@ -135,8 +137,8 @@ function bullets(s, items, x, y, w, h, size = 16) {
   rows.forEach((r, i) => {
     const y = 1.5 + i * 1.05;
     card(s, 0.6, y, 12.1, 0.9);
-    s.addShape(pres.ShapeType.ellipse, { x: 0.8, y: y + 0.2, w: 0.5, h: 0.5, fill: { color: ACC }, line: { color: ACC, width: 0 }, objectName: 'badge' });
-    s.addText(String(i + 1), { x: 0.8, y: y + 0.2, w: 0.5, h: 0.5, fontFace: FONT, fontSize: 16, bold: true, color: BG, align: 'center', valign: 'middle', margin: 0, isTextBox: true });
+    s.addShape(pres.ShapeType.rect, { x: 0.8, y: y + 0.2, w: 0.5, h: 0.5, fill: { color: ACC }, line: { color: ACC, width: 0 }, objectName: 'badge' });
+    s.addText(String(i + 1), { x: 0.8, y: y + 0.2, w: 0.5, h: 0.5, fontFace: FONT, fontSize: 16, bold: true, color: 'FFFFFF', align: 'center', valign: 'middle', margin: 0, isTextBox: true });
     s.addText(r[0], { x: 1.6, y, w: 3.6, h: 0.9, fontFace: FONT, fontSize: 18, bold: true, color: TEXT, valign: 'middle', margin: 0, isTextBox: true });
     s.addText(r[1], { x: 5.3, y, w: 7.2, h: 0.9, fontFace: FONT, fontSize: 15, color: MUTED, valign: 'middle', margin: 0, isTextBox: true });
   });
@@ -166,7 +168,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
 // 5. Solution overview
 // =====================================================================================
 {
-  const s = slide('The solution: DRISHTI command centre', 'This is the real application, running on a MongoDB with 3.6 million records. Left: key capabilities. Right: the command centre with KPIs, world risk map and live alerts.', 'Solution');
+  const s = slide('The solution: the DRISHTI situation room', 'This is the real application, running on a MongoDB with 3.6 million records. Left: key capabilities. Right: the Situation page: summary sentence, network at a glance, world risk map and live alert register.', 'Solution');
   bullets(s, [
     'World map of 138 river gauges in 29 countries',
     'Risk score 0-100 per gauge, recomputed every live tick',
@@ -175,7 +177,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
     'Drill-down hydrographs, weather and history',
     'One-click situation reports',
   ], 0.6, 1.55, 4.2, 5.2, 16);
-  shot(s, 'command_c.png', 5.15, 1.5, 7.55, 830 / 1600);
+  shot(s, 'situation.png', 5.15, 1.5, 7.55, 1150 / 1600);
 }
 
 // =====================================================================================
@@ -195,7 +197,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
   boxes.forEach((b, i) => {
     const x = 0.6 + i * (w + gap);
     card(s, x, 1.7, w, 3.7);
-    s.addShape(pres.ShapeType.roundRect, { x: x + 0.15, y: 1.85, w: w - 0.3, h: 0.5, rectRadius: 0.08, fill: { color: b[2] }, line: { color: b[2], width: 0 }, objectName: 'head' });
+    s.addShape(pres.ShapeType.rect, { x: x + 0.15, y: 1.85, w: w - 0.3, h: 0.5, rectRadius: 0.08, fill: { color: b[2] }, line: { color: b[2], width: 0 }, objectName: 'head' });
     s.addText(b[0], { x: x + 0.15, y: 1.85, w: w - 0.3, h: 0.5, fontFace: FONT, fontSize: 14, bold: true, color: BG, align: 'center', valign: 'middle', margin: 0, isTextBox: true });
     s.addText(b[1], { x: x + 0.2, y: 2.55, w: w - 0.4, h: 2.7, fontFace: FONT, fontSize: 14, color: TEXT, valign: 'top', margin: 0, isTextBox: true, paraSpaceAfter: 6 });
     if (i < boxes.length - 1) s.addText('▶', { x: x + w - 0.02, y: 3.35, w: gap + 0.04, h: 0.4, fontFace: FONT, fontSize: 12, color: MUTED, align: 'center', margin: 0, isTextBox: true });
@@ -265,13 +267,13 @@ function bullets(s, items, x, y, w, h, size = 16) {
 {
   const s = slide('Risk scoring and anomaly detection', 'The score blends three normalised signals. Level percentage: how close the river is to its danger level. Rain z-score: how unusual the last six hours of rain are for this gauge. Rise rate: how fast the river is climbing. Severity bands map score to colours. An anomaly is flagged on statistical outliers independent of score.', 'Analytics');
   card(s, 0.6, 1.5, 12.1, 1.35);
-  s.addText('score = 100 × ( 0.5 · level%  +  0.3 · rain z  +  0.2 · rise rate )', { x: 0.8, y: 1.55, w: 11.7, h: 0.75, fontFace: 'Courier New', fontSize: 20, bold: true, color: ACC, valign: 'middle', margin: 0, isTextBox: true });
+  s.addText('score = 100 × ( 0.5 · level%  +  0.3 · rain z  +  0.2 · rise rate )', { x: 0.8, y: 1.55, w: 11.7, h: 0.75, fontFace: MONO, fontSize: 20, bold: true, color: ACC, valign: 'middle', margin: 0, isTextBox: true });
   s.addText('level% = (level − base) / (danger − base)  ·  rain z = (6 h mean − μ) / σ ÷ 6  ·  rise = (m/h) ÷ 0.4  — each term capped to 0-1', { x: 0.8, y: 2.25, w: 11.7, h: 0.45, fontFace: FONT, fontSize: 14, color: MUTED, valign: 'middle', margin: 0, isTextBox: true });
 
-  const bands = [['CRITICAL', '≥ 70', CRIT, 'FFFFFF'], ['HIGH', '50 - 70', HIGH, BG], ['ELEVATED', '30 - 50', ELEV, BG], ['NORMAL', '< 30', NORM, BG]];
+  const bands = [['CRITICAL', '≥ 70', CRIT], ['HIGH', '50 - 70', HIGH], ['ELEVATED', '30 - 50', ELEV], ['NORMAL', '< 30', NORM]].map((b) => [...b, onFill(b[2])]);
   bands.forEach((b, i) => {
     const x = 0.6 + i * 3.075;
-    s.addShape(pres.ShapeType.roundRect, { x, y: 3.1, w: 2.9, h: 1.0, rectRadius: 0.1, fill: { color: b[2] }, line: { color: b[2], width: 0 }, objectName: 'band' });
+    s.addShape(pres.ShapeType.rect, { x, y: 3.1, w: 2.9, h: 1.0, rectRadius: 0.1, fill: { color: b[2] }, line: { color: b[2], width: 0 }, objectName: 'band' });
     s.addText([{ text: b[0], options: { bold: true, fontSize: 20, breakLine: true } }, { text: 'score ' + b[1], options: { fontSize: 14 } }], { x, y: 3.1, w: 2.9, h: 1.0, fontFace: FONT, color: b[3], align: 'center', valign: 'middle', margin: 0, isTextBox: true });
   });
 
@@ -280,14 +282,14 @@ function bullets(s, items, x, y, w, h, size = 16) {
   bullets(s, ['Rainfall z ≥ 3σ above the gauge\'s normal', 'River-level z ≥ 3σ above its mean', 'River rising ≥ 0.25 m per hour'], 0.85, 5.0, 5.4, 1.6, 15);
   card(s, 6.8, 4.4, 5.9, 2.3);
   s.addText('Pipeline stages (one query)', { x: 7.05, y: 4.5, w: 5.4, h: 0.4, fontFace: FONT, fontSize: 18, bold: true, color: TEXT, margin: 0, isTextBox: true });
-  s.addText('$match → $group → $lookup(river window)\n→ $lookup(baseline) → $lookup(station)\n→ $set(z-scores, score, severity) → $sort', { x: 7.05, y: 5.0, w: 5.4, h: 1.5, fontFace: 'Courier New', fontSize: 14, color: ACC, valign: 'top', margin: 0, isTextBox: true });
+  s.addText('$match → $group → $lookup(river window)\n→ $lookup(baseline) → $lookup(station)\n→ $set(z-scores, score, severity) → $sort', { x: 7.05, y: 5.0, w: 5.4, h: 1.5, fontFace: MONO, fontSize: 14, color: ACC, valign: 'top', margin: 0, isTextBox: true });
 }
 
 // =====================================================================================
 // 11. Risk map
 // =====================================================================================
 {
-  const s = slide('Live demo: interactive risk map and heatmap', 'Show: hover a gauge for the tooltip, toggle heatmap, filter by severity or continent, risk zones coloured by worst gauge inside them. Pulsing rings mark CRITICAL and HIGH gauges.', 'Demo');
+  const s = slide('Live demo: interactive risk map', 'Show: hover a gauge for the tooltip, toggle heatmap, filter by severity or continent, risk zones coloured by worst gauge inside them. Pulsing rings mark CRITICAL and HIGH gauges.', 'Demo');
   bullets(s, [
     'Hover for rainfall, river level and risk status',
     'Click a gauge for full statistics',
@@ -303,7 +305,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
 // =====================================================================================
 {
   const s = slide('Station drill-down: from alert to evidence', 'Click any alert and the drill-down shows the reasoning: how close to danger level, how fast rising, how unusual the rainfall is. The hydrograph shows rainfall hyetograph inverted above the river level with warning and danger lines.', 'Demo');
-  shot(s, 'station.png', 0.6, 1.5, 7.9, 1000 / 1600);
+  shot(s, 'station.png', 0.6, 1.5, 7.9, 1050 / 1600);
   textCard(s, 8.85, 1.5, 3.85, 1.9, 'Why this gauge?', 'Plain-language reasons: % of danger level, rise rate, rainfall σ.', CRIT, { bodySize: 14 });
   textCard(s, 8.85, 3.6, 3.85, 1.9, 'Hydrograph', 'Rainfall bars with river level against warning and danger thresholds.', ACC, { bodySize: 14 });
   textCard(s, 8.85, 5.7, 3.85, 1.2, 'Local history', 'Past events within 250 km via $geoNear.', VIO, { bodySize: 14, headSize: 16 });
@@ -314,23 +316,23 @@ function bullets(s, items, x, y, w, h, size = 16) {
 // =====================================================================================
 {
   const s = slide('Analytics: trends, rankings and anomalies', 'Everything here is computed on the fly by aggregation pipelines. Switch between hourly, daily and monthly granularity; the system reports how long the aggregation took.', 'Demo');
-  shot(s, 'analytics_c.png', 0.6, 1.45, 8.3, 950 / 1600);
+  shot(s, 'analysis_c.png', 0.6, 1.5, 7.3, 1100 / 1600);
   bullets(s, [
     'Hourly, daily and monthly trends by continent',
     'Regional risk ranking from latest snapshot',
     'Live anomaly table with z-scores and rise rate',
     'Historical events: year, type, season',
-  ], 9.25, 1.55, 3.5, 4.5, 15);
+  ], 8.4, 1.55, 4.3, 4.5, 15);
 }
 
 // =====================================================================================
 // 14. Pipeline lab + reports
 // =====================================================================================
 {
-  const s = slide('Pipeline Lab and situation reports', 'The Pipeline Lab exposes the exact aggregation pipelines and lets the audience run them against live data with timing. Reports are generated from the same results and stored in MongoDB.', 'Demo');
-  shot(s, 'lab.png', 0.6, 1.5, 5.95, 900 / 1600);
+  const s = slide('Pipelines page and situation reports', 'The Pipeline Lab exposes the exact aggregation pipelines and lets the audience run them against live data with timing. Reports are generated from the same results and stored in MongoDB.', 'Demo');
+  shot(s, 'pipelines.png', 0.6, 1.5, 5.95, 900 / 1600);
   shot(s, 'reports_c.png', 6.8, 1.5, 5.95, 900 / 1600);
-  s.addText('Pipeline Lab: inspect and run every pipeline with timings', { x: 0.6, y: 5.2, w: 5.95, h: 0.8, fontFace: FONT, fontSize: 16, bold: true, color: TEXT, margin: 0, isTextBox: true, valign: 'top' });
+  s.addText('Pipelines: inspect and run every aggregation with timings', { x: 0.6, y: 5.2, w: 5.95, h: 0.8, fontFace: FONT, fontSize: 16, bold: true, color: TEXT, margin: 0, isTextBox: true, valign: 'top' });
   s.addText('Situation report: severity summary, top gauges, regions of concern, recommended actions', { x: 6.8, y: 5.2, w: 5.95, h: 0.8, fontFace: FONT, fontSize: 16, bold: true, color: TEXT, margin: 0, isTextBox: true, valign: 'top' });
 }
 
@@ -348,7 +350,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
     ['6.3 Processing & aggregation', 'Pipelines for totals, trends, rankings, rate of change, baselines'],
     ['6.4 Risk zone & anomaly detection', 'Risk score, severity bands, z-score and rise-rate anomaly flags, alerts'],
     ['6.5 Interactive map & dashboard', 'React-Leaflet map, heatmap, KPI cards, Recharts, station drill-down'],
-    ['6.6 Analytics & reporting', 'Analytics page, stored situation reports, printable PDF view'],
+    ['6.6 Analytics & reporting', 'Analysis page, stored situation reports, printable PDF view'],
   ].map((r, i) => (i === 0 ? r : [cell(r[0], { bold: true }), cell(r[1])]));
   s.addTable(rows, { x: 0.6, y: 1.5, w: 12.1, colW: [4.3, 7.8], rowH: 0.62, border: { type: 'solid', pt: 0.75, color: BORDER }, valign: 'middle', margin: [0, 0.12, 0, 0.12] });
   s.addText('Stack: React 19 + Vite · Recharts · React-Leaflet · Node.js + Express · MongoDB 7', { x: 0.6, y: 6.2, w: 12.1, h: 0.4, fontFace: FONT, fontSize: 16, color: MUTED, margin: 0, isTextBox: true });
@@ -393,7 +395,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
     'Anomaly detection and risk scoring in aggregation pipelines',
     'Hourly, daily and monthly trends',
     'KPI dashboard, alerts and stored reports',
-    'Pipeline Lab showing every query',
+    'Pipelines page showing every query',
   ], 0.9, 2.3, 5.4, 4.3, 15);
   card(s, 6.8, 1.5, 5.9, 5.2);
   s.addText('Future scope', { x: 7.1, y: 1.65, w: 5.3, h: 0.45, fontFace: FONT, fontSize: 22, bold: true, color: ACC, margin: 0, isTextBox: true });
@@ -411,7 +413,7 @@ function bullets(s, items, x, y, w, h, size = 16) {
 // =====================================================================================
 {
   const s = pres.addSlide({ masterName: 'COVER', sectionTitle: 'Results' });
-  s.addText('Thank you', { x: 0.7, y: 1.2, w: 12, h: 1.2, fontFace: FONT, fontSize: 60, bold: true, color: TEXT, margin: 0, isTextBox: true });
+  s.addText('Thank you', { x: 0.7, y: 1.2, w: 12, h: 1.2, fontFace: HFONT, fontSize: 60, bold: true, color: TEXT, margin: 0, isTextBox: true });
   s.addText('Questions?', { x: 0.7, y: 2.4, w: 12, h: 0.8, fontFace: FONT, fontSize: 30, color: ACC, margin: 0, isTextBox: true });
   card(s, 0.7, 3.8, 8.2, 1.7);
   s.addText('Try the live system', { x: 1.0, y: 3.95, w: 7.6, h: 0.4, fontFace: FONT, fontSize: 16, color: MUTED, margin: 0, isTextBox: true });
