@@ -1,0 +1,6 @@
+node_modules/
+dist/
+*.log
+.env
+docs/ppt-build/node_modules/
+docs/shots/events.json

@@ -1,0 +1,11 @@
+services:
+  mongo:
+    image: mongo:7.0
+    container_name: drishti-mongo
+    restart: unless-stopped
+    ports:
+      - "127.0.0.1:27019:27017"
+    volumes:
+      - drishti-mongo-data:/data/db
+volumes:
+  drishti-mongo-data:
